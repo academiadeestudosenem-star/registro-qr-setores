@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro por Setores — QR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0e0a;
+    --bg2: #111711;
+    --bg3: #1a221a;
+    --border: #2a3a2a;
+    --green: #4ade80;
+    --green2: #22c55e;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --text: #e2f0e2;
+    --text2: #8aab8a;
+    --text3: #4d6b4d;
+    --mono: 'Courier New', monospace;
+    --sans: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  /* ── PUBLIC VIEW ── */
+  #public-view {
+    display: none;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: radial-gradient(ellipse at center, #0d1f0d 0%, #0a0e0a 70%);
+  }
+  .pub-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .pub-setor-nome {
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--green);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    line-height: 1.1;
+  }
+  .pub-desc {
+    font-size: 1rem;
+    color: var(--text2);
+    text-align: center;
+    margin-bottom: 3rem;
+    max-width: 400px;
+  }
+  .pub-ring-wrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin-bottom: 2.5rem;
+  }
+  .pub-ring-wrap svg { position: absolute; top: 0; left: 0; }
+  .pub-ring-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .pub-pct {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    font-family: var(--mono);
+  }
+  .pub-pct-label {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+    letter-spacing: 0.1em;
+  }
+  .pub-stats {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .pub-stat {
+    text-align: center;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    min-width: 100px;
+  }
+  .pub-stat-val {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+  .pub-stat-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+  .pub-tasks {
+    width: 100%;
+    max-width: 480px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .pub-tasks-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .pub-task-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .pub-task-item:last-child { border-bottom: none; }
+  .pub-task-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-done { background: var(--green); }
+  .dot-pend { background: var(--text3); }
+  .task-done-txt { color: var(--text2); text-decoration: line-through; }
+  .pub-updated {
+    margin-top: 2rem;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    text-align: center;
+  }
+
+  /* ── ADMIN VIEW ── */
+  #admin-view { display: none; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--green);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #0a0e0a;
+    font-weight: 900;
+    font-size: 18px;
+    font-family: var(--mono);
+    flex-shrink: 0;
+  }
+  .logo-text { font-size: 18px; font-weight: 600; }
+  .logo-sub { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+
+  .url-bar {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .url-label {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .url-input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 0.5rem 0.75rem;
+    outline: none;
+  }
+  .url-input:focus { border-color: var(--green); }
+  .url-btn {
+    background: var(--green);
+    color: #0a0e0a;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .url-status {
+    font-size: 12px;
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-family: var(--mono);
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ADD SETOR FORM */
+  .add-form {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 12px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.08em; }
+  .form-input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    padding: 0.6rem 0.85rem;
+    outline: none;
+    font-family: var(--sans);
+  }
+  .form-input:focus { border-color: var(--green); }
+  .btn-add {
+    background: var(--green);
+    color: #0a0e0a;
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem 1.5rem;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    height: 40px;
+    align-self: flex-end;
+  }
+  .btn-add:hover { background: var(--green2); }
+
+  /* SETOR GRID */
+  .setores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  .setor-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .setor-card:hover { border-color: var(--text3); }
+  .setor-card-header {
+    padding: 1.25rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .setor-card-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .setor-card-desc {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 3px;
+  }
+  .setor-pct-badge {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .badge-low { background: #1a1a0a; color: var(--amber); border: 1px solid #3a3010; }
+  .badge-mid { background: #0a1a14; color: #4ade80; border: 1px solid #1a3a28; }
+  .badge-high { background: #0a1a0a; color: var(--green); border: 1px solid #1a4a1a; }
+  .badge-done { background: #0a1a0a; color: #86efac; border: 1px solid #166534; }
+
+  .setor-progress-wrap {
+    padding: 1rem 1.25rem;
+  }
+  .progress-bar-bg {
+    height: 6px;
+    background: var(--bg3);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .fill-low { background: var(--amber); }
+  .fill-mid { background: var(--green2); }
+  .fill-high { background: var(--green); }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .pct-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bg3);
+    outline: none;
+  }
+  .pct-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--green);
+    cursor: pointer;
+  }
+  .slider-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text2);
+    min-width: 38px;
+    text-align: right;
+  }
+
+  /* TASKS */
+  .setor-tasks {
+    padding: 0 1.25rem 1rem;
+  }
+  .task-add-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .task-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 0.4rem 0.6rem;
+    outline: none;
+  }
+  .task-input:focus { border-color: var(--green); }
+  .btn-task-add {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--green);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 0.7rem;
+    line-height: 1;
+  }
+  .task-list { list-style: none; }
+  .task-li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 4px 0;
+    font-size: 13px;
+  }
+  .task-cb {
+    width: 14px; height: 14px;
+    accent-color: var(--green);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .task-txt { flex: 1; color: var(--text2); cursor: pointer; }
+  .task-txt.done { text-decoration: line-through; color: var(--text3); }
+  .btn-task-del {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  .btn-task-del:hover { color: var(--red); }
+
+  /* QR SECTION */
+  .setor-qr-section {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .qr-canvas-wrap {
+    background: white;
+    padding: 8px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .qr-right { flex: 1; min-width: 100px; }
+  .qr-url-text {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    word-break: break-all;
+    margin-bottom: 0.75rem;
+  }
+  .qr-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .btn-qr {
+    font-size: 12px;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+  .btn-qr:hover { border-color: var(--green); color: var(--green); }
+  .btn-qr.primary { background: var(--green); color: #0a0e0a; border-color: var(--green); font-weight: 700; }
+
+  /* CARD FOOTER */
+  .setor-card-footer {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .btn-del {
+    font-size: 12px;
+    padding: 0.3rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text3);
+    cursor: pointer;
+  }
+  .btn-del:hover { border-color: var(--red); color: var(--red); }
+
+  /* PRINT SHEET */
+  .print-section {
+    margin-top: 1rem;
+  }
+  .btn-print {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    padding: 0.6rem 1.25rem;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: var(--sans);
+  }
+  .btn-print:hover { border-color: var(--amber); color: var(--amber); }
+
+  @media print {
+    body { background: white !important; }
+    #admin-view { padding: 0; max-width: 100%; }
+    .top-bar, .url-bar, .add-form, .section-title, .setor-tasks,
+    .setor-card-footer, .btn-qr, .print-section, .slider-row,
+    .progress-bar-bg, .setor-card-header button { display: none !important; }
+    .setor-card { border: 1px solid #ccc; page-break-inside: avoid; }
+    .setores-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .setor-card-name { color: #000 !important; }
+    .setor-card-desc { color: #666 !important; }
+    .qr-url-text { color: #999 !important; }
+  }
+
+  .empty-state {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     MODO PÚBLICO — tela de visualização
+═══════════════════════════════════════ -->
+<div id="public-view">
+  <div class="pub-badge" id="pub-empresa">REGISTRO DE SETOR</div>
+  <div class="pub-setor-nome" id="pub-nome">—</div>
+  <div class="pub-desc" id="pub-desc"></div>
+  <div class="pub-ring-wrap">
+    <svg id="pub-ring-svg" width="220" height="220" viewBox="0 0 220 220">
+      <circle cx="110" cy="110" r="90" fill="none" stroke="#1a221a" stroke-width="16"/>
+      <circle id="pub-ring-arc" cx="110" cy="110" r="90" fill="none"
+        stroke="#4ade80" stroke-width="16" stroke-linecap="round"
+        stroke-dasharray="565.49" stroke-dashoffset="565.49"
+        transform="rotate(-90 110 110)" style="transition: stroke-dashoffset 1s ease;"/>
+    </svg>
+    <div class="pub-ring-center">
+      <div class="pub-pct" id="pub-pct">0%</div>
+      <div class="pub-pct-label">concluído</div>
+    </div>
+  </div>
+  <div class="pub-stats" id="pub-stats"></div>
+  <div class="pub-tasks" id="pub-tasks-wrap" style="display:none;">
+    <div class="pub-tasks-header">Atividades do setor</div>
+    <div id="pub-task-list"></div>
+  </div>
+  <div class="pub-updated" id="pub-updated"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODO ADMIN — painel de gestão
+═══════════════════════════════════════ -->
+<div id="admin-view">
+  <div class="top-bar">
+    <div class="logo">
+      <div class="logo-icon">QR</div>
+      <div>
+        <div class="logo-text">Registro por Setor</div>
+        <div class="logo-sub">sistema de progresso via QR Code</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--text3)" id="total-badge"></span>
+      <button class="btn-print" onclick="window.print()">🖨 Imprimir QR Codes</button>
+    </div>
+  </div>
+
+  <!-- URL BASE CONFIG -->
+  <div class="url-bar">
+    <span class="url-label">URL base:</span>
+    <input class="url-input" id="base-url-input" placeholder="https://seuusuario.github.io/registro-qr-setores.html" />
+    <button class="url-btn" onclick="saveBaseUrl()">Salvar</button>
+    <span class="url-status" id="url-status"></span>
+  </div>
+
+  <!-- FORMULÁRIO NOVO SETOR -->
+  <div class="section-title">Adicionar setor</div>
+  <div class="add-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nome do setor *</label>
+        <input class="form-input" id="input-nome" placeholder="Ex: Almoxarifado, Lavoura A, Curral..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição (opcional)</label>
+        <input class="form-input" id="input-desc" placeholder="Observação ou responsável..." />
+      </div>
+      <button class="btn-add" onclick="addSetor()">+ Adicionar</button>
+    </div>
+  </div>
+
+  <!-- GRID DE SETORES -->
+  <div class="section-title">Setores cadastrados</div>
+  <div class="setores-grid" id="setores-grid"></div>
+
+  <div class="print-section">
+    <button class="btn-print" onclick="window.print()">🖨 Imprimir folha com todos os QR Codes</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// ESTADO & PERSISTÊNCIA
+// ═══════════════════════════════════════
+let state = {
+  setores: [],
+  baseUrl: window.location.href.split('?')[0]
+};
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('qr-registro-state');
+    if (s) {
+      const parsed = JSON.parse(s);
+      state.setores = parsed.setores || [];
+      state.baseUrl = parsed.baseUrl || window.location.href.split('?')[0];
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  localStorage.setItem('qr-registro-state', JSON.stringify(state));
+}
+
+// ═══════════════════════════════════════
+// ROTEAMENTO: ADMIN vs PÚBLICO
+// ═══════════════════════════════════════
+function init() {
+  loadState();
+  const params = new URLSearchParams(window.location.search);
+  const setorId = params.get('setor');
+  if (setorId) {
+    showPublicView(setorId);
+  } else {
+    showAdminView();
+  }
+}
+
+// ═══════════════════════════════════════
+// MODO PÚBLICO
+// ═══════════════════════════════════════
+function showPublicView(id) {
+  document.getElementById('public-view').style.display = 'flex';
+  const setor = state.setores.find(s => s.id === id);
+  if (!setor) {
+    document.getElementById('pub-nome').textContent = 'Setor não encontrado';
+    document.getElementById('pub-desc').textContent = 'Verifique se o QR code está atualizado.';
+    return;
+  }
+  document.getElementById('pub-nome').textContent = setor.nome;
+  document.getElementById('pub-desc').textContent = setor.desc || '';
+  document.getElementById('pub-pct').textContent = setor.progresso + '%';
+
+  const arc = document.getElementById('pub-ring-arc');
+  const circumference = 2 * Math.PI * 90;
+  const offset = circumference * (1 - setor.progresso / 100);
+  setTimeout(() => {
+    arc.style.strokeDashoffset = offset;
+    const cor = setor.progresso >= 75 ? '#4ade80' : setor.progresso >= 40 ? '#22c55e' : '#fbbf24';
+    arc.style.stroke = cor;
+  }, 200);
+
+  const tasks = setor.tasks || [];
+  const done = tasks.filter(t => t.done).length;
+  const total = tasks.length;
+
+  document.getElementById('pub-stats').innerHTML = `
+    <div class="pub-stat">
+      <div class="pub-stat-val" style="color:var(--green)">${setor.progresso}%</div>
+      <div class="pub-stat-label">Progresso</div>
+    </div>
+    ${total > 0 ? `
+    <div class="pub-stat">
+      <div class="pub-stat-val" style="color:#86efac">${done}/${total}</div>
+      <div class="pub-stat-label">Atividades</div>
+    </div>` : ''}
+  `;
+
+  if (tasks.length > 0) {
+    document.getElementById('pub-tasks-wrap').style.display = 'block';
+    document.getElementById('pub-task-list').innerHTML = tasks.map(t => `
+      <div class="pub-task-item">
+        <div class="pub-task-dot ${t.done ? 'dot-done' : 'dot-pend'}"></div>
+        <span class="${t.done ? 'task-done-txt' : ''}" style="color:var(--text2);font-size:14px;">${t.texto}</span>
+      </div>
+    `).join('');
+  }
+
+  if (setor.updatedAt) {
+    const d = new Date(setor.updatedAt);
+    document.getElementById('pub-updated').textContent = `Última atualização: ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}`;
+  }
+}
+
+// ═══════════════════════════════════════
+// MODO ADMIN
+// ═══════════════════════════════════════
+function showAdminView() {
+  document.getElementById('admin-view').style.display = 'block';
+  document.getElementById('base-url-input').value = state.baseUrl;
+  renderSetores();
+  updateTotalBadge();
+}
+
+function saveBaseUrl() {
+  const val = document.getElementById('base-url-input').value.trim();
+  if (!val) return;
+  state.baseUrl = val;
+  saveState();
+  document.getElementById('url-status').textContent = '✓ Salvo!';
+  document.getElementById('url-status').style.color = '#4ade80';
+  setTimeout(() => { document.getElementById('url-status').textContent = ''; }, 2500);
+  renderSetores();
+}
+
+function updateTotalBadge() {
+  const n = state.setores.length;
+  document.getElementById('total-badge').textContent = n + (n === 1 ? ' setor' : ' setores');
+}
+
+function addSetor() {
+  const nome = document.getElementById('input-nome').value.trim();
+  const desc = document.getElementById('input-desc').value.trim();
+  if (!nome) {
+    document.getElementById('input-nome').focus();
+    document.getElementById('input-nome').style.borderColor = '#f87171';
+    setTimeout(() => document.getElementById('input-nome').style.borderColor = '', 2000);
+    return;
+  }
+  const id = 'setor-' + Date.now().toString(36);
+  state.setores.push({ id, nome, desc, progresso: 0, tasks: [], updatedAt: Date.now() });
+  saveState();
+  document.getElementById('input-nome').value = '';
+  document.getElementById('input-desc').value = '';
+  renderSetores();
+  updateTotalBadge();
+}
+
+function deleteSetor(id) {
+  if (!confirm('Remover este setor?')) return;
+  state.setores = state.setores.filter(s => s.id !== id);
+  saveState();
+  renderSetores();
+  updateTotalBadge();
+}
+
+function updateProgresso(id, val) {
+  const s = state.setores.find(s => s.id === id);
+  if (!s) return;
+  s.progresso = parseInt(val);
+  s.updatedAt = Date.now();
+  saveState();
+  const el = document.getElementById('pct-val-' + id);
+  if (el) el.textContent = val + '%';
+  const fill = document.getElementById('fill-' + id);
+  if (fill) {
+    fill.style.width = val + '%';
+    fill.className = 'progress-bar-fill ' + (val >= 75 ? 'fill-high' : val >= 40 ? 'fill-mid' : 'fill-low');
+  }
+  const badge = document.getElementById('badge-' + id);
+  if (badge) {
+    badge.textContent = val + '%';
+    badge.className = 'setor-pct-badge ' + (val == 100 ? 'badge-done' : val >= 75 ? 'badge-high' : val >= 40 ? 'badge-mid' : 'badge-low');
+  }
+}
+
+function addTask(id) {
+  const inp = document.getElementById('task-inp-' + id);
+  const texto = inp.value.trim();
+  if (!texto) return;
+  const s = state.setores.find(s => s.id === id);
+  if (!s) return;
+  s.tasks = s.tasks || [];
+  s.tasks.push({ id: Date.now().toString(36), texto, done: false });
+  s.updatedAt = Date.now();
+  saveState();
+  inp.value = '';
+  renderTaskList(id);
+}
+
+function toggleTask(setorId, taskId) {
+  const s = state.setores.find(s => s.id === setorId);
+  if (!s) return;
+  const t = s.tasks.find(t => t.id === taskId);
+  if (t) t.done = !t.done;
+  s.updatedAt = Date.now();
+  saveState();
+  renderTaskList(setorId);
+}
+
+function deleteTask(setorId, taskId) {
+  const s = state.setores.find(s => s.id === setorId);
+  if (!s) return;
+  s.tasks = s.tasks.filter(t => t.id !== taskId);
+  saveState();
+  renderTaskList(setorId);
+}
+
+function renderTaskList(id) {
+  const s = state.setores.find(s => s.id === id);
+  if (!s) return;
+  const el = document.getElementById('task-list-' + id);
+  if (!el) return;
+  el.innerHTML = (s.tasks || []).map(t => `
+    <li class="task-li">
+      <input type="checkbox" class="task-cb" ${t.done ? 'checked' : ''} onchange="toggleTask('${id}','${t.id}')">
+      <span class="task-txt ${t.done ? 'done' : ''}" onclick="toggleTask('${id}','${t.id}')">${t.texto}</span>
+      <button class="btn-task-del" onclick="deleteTask('${id}','${t.id}')">×</button>
+    </li>
+  `).join('');
+}
+
+// ═══════════════════════════════════════
+// RENDER CARDS
+// ═══════════════════════════════════════
+function renderSetores() {
+  const grid = document.getElementById('setores-grid');
+  if (state.setores.length === 0) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      Nenhum setor cadastrado ainda.<br>Adicione o primeiro setor acima.
+    </div>`;
+    return;
+  }
+  grid.innerHTML = state.setores.map(s => buildCard(s)).join('');
+  state.setores.forEach(s => {
+    renderTaskList(s.id);
+    generateQR(s);
+  });
+}
+
+function buildCard(s) {
+  const pct = s.progresso;
+  const badgeClass = pct == 100 ? 'badge-done' : pct >= 75 ? 'badge-high' : pct >= 40 ? 'badge-mid' : 'badge-low';
+  const fillClass = pct >= 75 ? 'fill-high' : pct >= 40 ? 'fill-mid' : 'fill-low';
+  const url = state.baseUrl + '?setor=' + s.id;
+  return `
+    <div class="setor-card" id="card-${s.id}">
+      <div class="setor-card-header">
+        <div>
+          <div class="setor-card-name">${s.nome}</div>
+          ${s.desc ? `<div class="setor-card-desc">${s.desc}</div>` : ''}
+        </div>
+        <div class="setor-pct-badge ${badgeClass}" id="badge-${s.id}">${pct}%</div>
+      </div>
+      <div class="setor-progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill ${fillClass}" id="fill-${s.id}" style="width:${pct}%"></div>
+        </div>
+        <div class="slider-row">
+          <span style="font-size:11px;color:var(--text3);font-family:var(--mono);">0%</span>
+          <input type="range" class="pct-slider" min="0" max="100" value="${pct}" step="5"
+            oninput="updateProgresso('${s.id}', this.value)" />
+          <span style="font-size:11px;color:var(--text3);font-family:var(--mono);">100%</span>
+          <span class="slider-val" id="pct-val-${s.id}">${pct}%</span>
+        </div>
+      </div>
+      <div class="setor-tasks">
+        <div class="task-add-row">
+          <input type="text" class="task-input" id="task-inp-${s.id}"
+            placeholder="Adicionar atividade..."
+            onkeydown="if(event.key==='Enter') addTask('${s.id}')"/>
+          <button class="btn-task-add" onclick="addTask('${s.id}')">+</button>
+        </div>
+        <ul class="task-list" id="task-list-${s.id}"></ul>
+      </div>
+      <div class="setor-qr-section">
+        <div class="qr-canvas-wrap" id="qr-${s.id}"></div>
+        <div class="qr-right">
+          <div class="qr-url-text" id="qr-url-${s.id}">${url}</div>
+          <div class="qr-actions">
+            <button class="btn-qr primary" onclick="downloadQR('${s.id}','${s.nome}')">⬇ Baixar QR</button>
+            <button class="btn-qr" onclick="copyUrl('${s.id}')">📋 Copiar link</button>
+            <button class="btn-qr" onclick="openUrl('${s.id}')">↗ Testar</button>
+          </div>
+        </div>
+      </div>
+      <div class="setor-card-footer">
+        <button class="btn-del" onclick="deleteSetor('${s.id}')">Remover setor</button>
+      </div>
+    </div>
+  `;
+}
+
+function generateQR(s) {
+  const el = document.getElementById('qr-' + s.id);
+  if (!el) return;
+  el.innerHTML = '';
+  const url = state.baseUrl + '?setor=' + s.id;
+  document.getElementById('qr-url-' + s.id).textContent = url;
+  try {
+    new QRCode(el, {
+      text: url,
+      width: 100,
+      height: 100,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) { el.textContent = 'QR indisponível'; }
+}
+
+function downloadQR(id, nome) {
+  const el = document.getElementById('qr-' + id);
+  const img = el.querySelector('img');
+  const canvas = el.querySelector('canvas');
+  let src = '';
+  if (canvas) {
+    src = canvas.toDataURL('image/png');
+  } else if (img) {
+    src = img.src;
+  }
+  if (!src) return;
+  const a = document.createElement('a');
+  a.href = src;
+  a.download = 'qr-' + nome.replace(/\s+/g, '-').toLowerCase() + '.png';
+  a.click();
+}
+
+function copyUrl(id) {
+  const url = state.baseUrl + '?setor=' + id;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado!';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+  });
+}
+
+function openUrl(id) {
+  const url = state.baseUrl + '?setor=' + id;
+  window.open(url, '_blank');
+}
+
+// ═══════════════════════════════════════
+// INICIALIZAR
+// ═══════════════════════════════════════
+init();
+</script>
+</body>
+</html>
